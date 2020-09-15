@@ -4,11 +4,12 @@
 namespace macropop {
 
 	GlobalPopulationOutput::GlobalPopulationOutput(
+			std::string output_file,
 			fpmas::api::model::Model& model,
 			fpmas::api::communication::MpiCommunicator& comm)
-		: model(model), comm(comm), mpi(comm) {
+		: output_file(output_file), model(model), comm(comm), mpi(comm) {
 			FPMAS_ON_PROC(comm, 0) {
-				std::ofstream outfile("output.csv", std::ios::out | std::ios::trunc);
+				std::ofstream outfile(output_file, std::ios::out | std::ios::trunc);
 				outfile << "T,S,I,R,N" << std::endl;
 			}
 		}
@@ -22,7 +23,7 @@ namespace macropop {
 		}
 
 		FPMAS_ON_PROC(comm, 0) {
-			std::ofstream outfile("output.csv", std::ios::out | std::ios::app);
+			std::ofstream outfile(output_file, std::ios::out | std::ios::app);
 
 			auto total_population_vec = mpi.gather(total_population, 0);
 

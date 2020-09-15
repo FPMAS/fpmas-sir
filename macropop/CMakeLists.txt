@@ -14,7 +14,11 @@ message("-- SYNC_MODE : ${SYNC_MODE}")
 set(LOG_LEVEL 0 CACHE STRING "Log level")
 add_compile_definitions(LOG_LEVEL=${LOG_LEVEL})
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/../argtable)
 
-add_executable(fpmas-sir-macropop macropop.cpp main.cpp output.cpp)
+add_executable(fpmas-sir-macropop
+	macropop.cpp main.cpp output.cpp cli.cpp
+	../argtable/argtable3.c)
 target_link_libraries(fpmas-sir-macropop fpmas MPI::MPI_CXX zoltan)
