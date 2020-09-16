@@ -34,25 +34,47 @@ namespace macropop {
 		population.R = j.at("R").get<double>();
 	}
 
+	/**
+	 * Migrate population from this city to the neighbor city, according to the
+	 * city migration rates.
+	 */
 	void City::migrate(double m, City* neighbor_city) {
+		// Population to migrate
 		Population migration;
 		{
+			// First, lock this city, to avoid other cities to migrate
+			// population to it.
 			fpmas::model::LockGuard lock(this);
+			// Computes migration
 			migration = {
 				g_s * m * this->population.S,
 				g_i * m * this->population.I,
 				g_r * m * this->population.R
 			};
+			// Removes population from this city while its lock
 			this->population -= migration;
+
+			// End of `lock` scope : automatically unlocks this city
 		}
+		// Then, acquire the target city
 		fpmas::model::AcquireGuard acquire(neighbor_city);
+		// Safely add population to the target city
 		neighbor_city->population += migration;
+
+		// End of `acquire` scope : automatically releases and commits write
+		// operations on `neighbor_city`
 	}
 
+	/**
+	 * City Agent Behavior.
+	 */
 	void City::act() {
+		// Get City neighbors
 		auto neighbors = outNeighbors<City>(CITY_TO_CITY);
+		// The same population amount is sent to each city
 		double m = 1. / neighbors.count();
 
+		// Migrate population to each neighbor
 		for(auto neighbor_city : neighbors) {
 			migrate(m, neighbor_city);
 		}
@@ -79,15 +101,25 @@ namespace macropop {
 
 	const double Disease::delta_t {0.1};
 
+	/**
+	 * Disease Agent Behavior.
+	 */
 	void Disease::act() {
-		auto city = *outNeighbors<City>(DISEASE_TO_CITY).begin();
+		// Access the first (and only) neighbor city
+		auto city = outNeighbors<City>(DISEASE_TO_CITY)[0];
 
-		fpmas::model::AcquireGuard guard (city);
+		// Acquires the neighbor city
+		fpmas::model::AcquireGuard acquire (city);
 
+		// Updates the city population according to the SIR model
 		city->population = RK4::solve(alpha, beta, delta_t, city->population);
+
 		FPMAS_LOGI(this->model()->graph().getMpiCommunicator().getRank(),
 				"DISEASE", "Updated city population : %f, %f, %f",
 				city->population.S, city->population.I, city->population.R);
+
+		// End of `acquire` scope : automatically releases and commits write
+		// operations on `city`
 	}
 
 	void Disease::to_json(::nlohmann::json& j, const Disease* disease) {
