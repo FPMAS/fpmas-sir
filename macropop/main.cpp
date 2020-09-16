@@ -5,6 +5,8 @@
 #include "fpmas/random/distribution.h"
 #include "fpmas/graph/graph_builder.h"
 
+#include <chrono>
+
 #ifndef SYNC_MODE
 #define SYNC_MODE HardSyncMode
 #endif
@@ -17,6 +19,9 @@ using namespace macropop;
 FPMAS_JSON_SET_UP(City, Disease)
 
 int main(int argc, char** argv) {
+	auto begin = std::chrono::system_clock::now();
+	int rank;
+
 	// Parses command line arguments
 	Config config(argc, argv);
 
@@ -27,6 +32,7 @@ int main(int argc, char** argv) {
 		FPMAS_REGISTER_AGENT_TYPES(City, Disease)
 
 		fpmas::model::DefaultModel<SYNC_MODE> model;
+		rank = model.getMpiCommunicator().getRank();
 
 		auto& city_group = model.buildGroup(CITY);
 		auto& disease_group = model.buildGroup(DISEASE);
@@ -85,4 +91,9 @@ int main(int argc, char** argv) {
 	}
 
 	fpmas::finalize();
+	auto end = std::chrono::system_clock::now();
+	if(rank==0) {
+		std::chrono::duration<double> diff = end - start;
+		std::cout << "Execution time : " << diff.count() << " s" << std::endl;
+	}
 }

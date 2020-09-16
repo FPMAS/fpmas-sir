@@ -12,7 +12,6 @@ set(SYNC_MODE "HardSyncMode" CACHE STRING "Graph Synchronization mode")
 message("-- SYNC_MODE : ${SYNC_MODE}")
 
 set(LOG_LEVEL 0 CACHE STRING "Log level")
-add_compile_definitions(LOG_LEVEL=${LOG_LEVEL})
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -20,3 +19,4 @@ include_directories(
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/macropop)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/micropop)
+
