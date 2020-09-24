@@ -41,12 +41,7 @@ int main(int argc, char** argv) {
 		FPMAS_ON_PROC(model.getMpiCommunicator(), 0) {
 			// Initializes random distribution
 			fpmas::random::mt19937 rd;
-			fpmas::random::PoissonDistribution<std::size_t> distrib(config.k);
-
-			// Automatic graph builder
-			fpmas::graph::RandomDegreeGraphBuilder<fpmas::model::AgentPtr>
-				generator {rd, distrib};
-
+			fpmas::random::PoissonDistribution<std::size_t> edge_distrib(config.k);
 
 			// Agent builder that will build cities
 			fpmas::model::AgentNodeBuilder city_builder(city_group);
@@ -57,9 +52,33 @@ int main(int argc, char** argv) {
 							0.12, 0.12, 0.12));
 			}
 
-			// Automatically builds a graph from the cities provided to
-			// `city_builder`
-			generator.build(city_builder, CITY_TO_CITY, model.graph());
+			switch(config.graph_mode) {
+				case UNIFORM:
+					{
+						FPMAS_LOGI(model.getMpiCommunicator().getRank(), "MACROPOP", "Initializing uniform city graph...");
+						// Automatic graph builder
+						fpmas::graph::UniformGraphBuilder<fpmas::model::AgentPtr>
+							generator (rd, edge_distrib);
+
+						// Automatically builds a graph from the cities provided to
+						// `city_builder`
+						generator.build(city_builder, CITY_TO_CITY, model.graph());
+						break;
+					}
+
+				case CLUSTERED:
+					{
+						FPMAS_LOGI(model.getMpiCommunicator().getRank(), "MACROPOP", "Initializing clustered city graph...");
+						fpmas::random::UniformRealDistribution<double> location_dist(0, 1000);
+						fpmas::graph::ClusteredGraphBuilder<fpmas::model::AgentPtr> generator
+							(rd, edge_distrib, location_dist, location_dist);
+
+						// Automatically builds a graph from the cities provided to
+						// `city_builder`
+						generator.build(city_builder, CITY_TO_CITY, model.graph());
+						break;
+					}
+			}
 
 			// Associates a disease to each city
 			for(auto city : city_group.agents()) {

@@ -2,6 +2,11 @@
 #include <iostream>
 
 namespace macropop {
+	enum GraphMode {
+		CLUSTERED,
+		UNIFORM
+	};
+
 	class Config {
 		private:
 			struct arg_lit* help
@@ -18,13 +23,15 @@ namespace macropop {
 				= arg_dbln("b", "beta", "<f>", 0, 1, "Beta parameter of the SIR model (default: 0.5)");
 			struct arg_int* k_arg
 				= arg_intn("k", "graph-degree", "<n>", 0, 1, "Average count of target cities of each city (default: 6)");
+			struct arg_str* mode_arg
+				= arg_strn("m", "graph-mode", "<mode>", 0, 1, "Graph builder mode : 'clustered' or 'uniform' (default: clustered)");
 			struct arg_file* output_file_arg
 				= arg_filen("o", "output-file", "<file>", 0, 1, "CSV output file (default: 'output.csv')");
 			struct arg_int* max_step_arg
 				= arg_intn("s", "max-step", "<n>", 0, 1, "Number of time steps to run (default: 1000)");
 			struct arg_end* end = arg_end(20);
 
-			void* argtable[10] = {
+			void* argtable[11] = {
 				help,
 				city_count_arg,
 				population_arg,
@@ -32,6 +39,7 @@ namespace macropop {
 				alpha_arg,
 				beta_arg,
 				k_arg,
+				mode_arg,
 				output_file_arg,
 				max_step_arg,
 				end
@@ -46,6 +54,7 @@ namespace macropop {
 			double alpha = 0.2;
 			double beta = 0.5;
 			std::size_t k = 6;
+			GraphMode graph_mode = CLUSTERED;
 			std::string output_file = "output.csv";
 			int max_step = 1000;
 

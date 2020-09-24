@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
 			fpmas::random::mt19937 generator;
 			fpmas::random::PoissonDistribution<std::size_t> distribution (average_neighbors);
-			fpmas::graph::RandomDegreeGraphBuilder<fpmas::api::model::AgentPtr>
+			fpmas::graph::UniformGraphBuilder<fpmas::api::model::AgentPtr>
 				graph_builder (generator, distribution);
 
 			graph_builder.build(node_builder, AGENT_TO_AGENT, model.graph());
