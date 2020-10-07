@@ -1,4 +1,4 @@
-#include "../argtable/argtable3.h"
+#include "argtable3.h"
 #include <iostream>
 
 namespace macropop {

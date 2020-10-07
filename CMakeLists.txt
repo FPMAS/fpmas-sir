@@ -16,7 +16,7 @@ set(LOG_LEVEL 0 CACHE STRING "Log level")
 include_directories(
 	${CMAKE_PREFIX_PATH}/include
 	${CMAKE_CURRENT_SOURCE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/argtable)
+	${CMAKE_CURRENT_BINARY_DIR}/argtable3/src)
 
 find_library(FPMAS fpmas)
 if(FPMAS-NOTFOUND)
@@ -38,8 +38,10 @@ endif()
 set(DEPENDENCIES 
 	${FPMAS}
 	MPI::MPI_CXX
-	${ZOLTAN})
+	${ZOLTAN}
+	argtable3)
 
+add_subdirectory(argtable3)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/macropop)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/micropop)
 

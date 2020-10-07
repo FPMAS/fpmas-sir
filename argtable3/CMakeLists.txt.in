@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(argtable3-download)
+
+include(ExternalProject)
+
+ExternalProject_Add(argtable3
+	DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}/argtable3-download
+	SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/src
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+	TEST_COMMAND ""
+	URL
+	"https://github.com/argtable/argtable3/releases/download/v3.1.5.1c1bb23/argtable-3.1.5-amalgamation.tar.gz"
+	)
