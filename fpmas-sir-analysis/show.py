@@ -36,7 +36,7 @@ def plot(output_files):
         plt.ylabel("Population")
         plt.yticks(np.arange(0, max_y, step=step_y))
         index+=1
-    plt.legend()
+        plt.legend()
     plt.show()
 
 if __name__ == "__main__":
