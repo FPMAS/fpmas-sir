@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
 	fpmas::init(argc, argv);
 	{
-		fpmas::model::DefaultModel<SYNC_MODE> model;
+		fpmas::model::Model<SYNC_MODE> model;
 
 		auto& agent_group = model.buildGroup(AGENT);
 		auto& cluster_group = model.buildGroup(CLUSTER);

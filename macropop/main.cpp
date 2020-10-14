@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
 		// Register user-defined agent types
 		FPMAS_REGISTER_AGENT_TYPES(City, Disease)
 
-		fpmas::model::DefaultModel<SYNC_MODE> model;
+		fpmas::model::Model<SYNC_MODE> model;
 		rank = model.getMpiCommunicator().getRank();
 
 		auto& city_group = model.buildGroup(CITY);
