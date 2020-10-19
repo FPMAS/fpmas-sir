@@ -18,8 +18,7 @@ namespace macropop {
 		Population total_population;
 		auto& city_group = model.getGroup(CITY);
 		for(auto city : city_group.localAgents()) {
-			fpmas::model::SharedLockGuard lock (*city);
-			total_population += static_cast<City*>(city->get())->population;
+			total_population += static_cast<City*>(city)->population;
 		}
 
 		FPMAS_ON_PROC(comm, 0) {

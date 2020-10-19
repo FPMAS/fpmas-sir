@@ -84,8 +84,7 @@ int main(int argc, char** argv) {
 			for(auto city : city_group.agents()) {
 				Disease* disease = new Disease(config.alpha, config.beta);
 				disease_group.add(disease);
-				model.graph().link(
-						disease->node(), city->get()->node(), DISEASE_TO_CITY);
+				model.link(disease, city, DISEASE_TO_CITY);
 			}
 		}
 

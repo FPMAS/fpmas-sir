@@ -18,8 +18,7 @@ namespace micropop {
 		std::array<std::size_t, 3> total_population {0, 0, 0};
 		auto& agent_group = model.getGroup(AGENT);
 		for(auto agent : agent_group.localAgents()) {
-			fpmas::model::SharedLockGuard lock (*agent);
-			switch(static_cast<Agent*>(agent->get())->getState()) {
+			switch(static_cast<Agent*>(agent)->getState()) {
 				case S:
 					total_population[0]++;
 					break;
