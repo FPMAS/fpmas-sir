@@ -33,7 +33,7 @@ def plot(output_files):
         plt.xticks(np.arange(data[0][0], data[0][-1], step=100))
         max_y = max(data[4])
         step_y = max_y / 10
-        plt.ylabel("Population")
+        plt.ylabel("Global Population")
         plt.yticks(np.arange(0, max_y, step=step_y))
         index+=1
         plt.legend()
