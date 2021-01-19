@@ -18,7 +18,7 @@ namespace macropop {
 		Population total_population;
 		auto& city_group = model.getGroup(CITY);
 		for(auto city : city_group.localAgents()) {
-			total_population += static_cast<City*>(city)->population;
+			total_population += dynamic_cast<City*>(city)->population;
 		}
 
 		FPMAS_ON_PROC(comm, 0) {
