@@ -5,8 +5,6 @@
 #include "fpmas/random/distribution.h"
 #include "fpmas/graph/graph_builder.h"
 
-#include <chrono>
-
 #ifndef SYNC_MODE
 #define SYNC_MODE HardSyncMode
 #endif
@@ -19,7 +17,6 @@ using namespace macropop;
 FPMAS_JSON_SET_UP(City, Disease)
 
 int main(int argc, char** argv) {
-	auto begin = std::chrono::system_clock::now();
 	int rank;
 
 	// Parses command line arguments
@@ -109,9 +106,4 @@ int main(int argc, char** argv) {
 	}
 
 	fpmas::finalize();
-	auto end = std::chrono::system_clock::now();
-	if(rank==0) {
-		std::chrono::duration<double> diff = end - start;
-		std::cout << "Execution time : " << diff.count() << " s" << std::endl;
-	}
 }
