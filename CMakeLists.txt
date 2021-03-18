@@ -18,5 +18,3 @@ include_directories(
 
 add_subdirectory(argtable3)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/macropop)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/micropop)
-
