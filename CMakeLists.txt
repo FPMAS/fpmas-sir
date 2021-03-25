@@ -8,9 +8,6 @@ find_package(MPI REQUIRED)
 
 set(CMAKE_CXX_DEBUG_FLAGS "${CMAKE_CXX_DEBUG_FLAGS} -g -O0")
 
-set(SYNC_MODE "HardSyncMode" CACHE STRING "Graph Synchronization mode")
-message("-- SYNC_MODE : ${SYNC_MODE}")
-
 include_directories(
 	${CMAKE_PREFIX_PATH}/include
 	${CMAKE_CURRENT_SOURCE_DIR}

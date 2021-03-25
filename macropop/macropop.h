@@ -68,6 +68,12 @@ namespace macropop {
 			 */
 			double g_r;
 
+			/**
+			 * Default constructor used for "light_json" edge transmission
+			 * optimization.
+			 */
+			City() {}
+
 			City(
 					const Population& population,
 					double g_s, double g_i, double g_r
@@ -115,6 +121,12 @@ namespace macropop {
 			 */
 			static const double delta_t;
 		public:
+			/**
+			 * Default constructor used for "light_json" edge transmission
+			 * optimization.
+			 */
+			Disease() {}
+
 			Disease(double alpha, double beta)
 				: alpha(alpha), beta(beta) {}
 

@@ -33,8 +33,8 @@ namespace macropop {
 			beta = beta_arg->dval[0];
 		if(k_arg->count > 0)
 			k = k_arg->ival[0];
-		if(mode_arg->count > 0) {
-			std::string mode_str(mode_arg->sval[0]);
+		if(graph_mode_arg->count > 0) {
+			std::string mode_str(graph_mode_arg->sval[0]);
 			if(mode_str == "clustered" || mode_str == "CLUSTERED")
 				graph_mode = CLUSTERED;
 			else if (mode_str == "uniform" || mode_str == "UNIFORM")
@@ -51,6 +51,20 @@ namespace macropop {
 			output_file = std::string(output_file_arg->filename[0]);
 		if(max_step_arg->count > 0)
 			max_step = max_step_arg->ival[0];
+		if(sync_mode_arg->count > 0) {
+			std::string mode_str(sync_mode_arg->sval[0]);
+			if(mode_str == "ghost" || mode_str == "GHOST")
+				sync_mode = GHOST;
+			else if (mode_str == "hard_sync" || mode_str == "HARD_SYNC")
+				sync_mode = HARD_SYNC;
+			else {
+				std::cout << "Unknown sync mode : " << mode_str << std::endl;
+				printf("Try 'fpmas-sir-macropop --help' for more information.\n");
+
+				arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
+				std::exit(EXIT_FAILURE);
+			}
+		}
 	}
 
 }

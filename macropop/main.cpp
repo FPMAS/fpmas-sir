@@ -5,10 +5,6 @@
 #include "fpmas/random/distribution.h"
 #include "fpmas/graph/graph_builder.h"
 
-#ifndef SYNC_MODE
-#define SYNC_MODE HardSyncMode
-#endif
-
 using fpmas::synchro::HardSyncMode;
 using fpmas::synchro::GhostMode;
 using namespace macropop;
@@ -28,19 +24,27 @@ int main(int argc, char** argv) {
 		// Register user-defined agent types
 		FPMAS_REGISTER_AGENT_TYPES(City, Disease)
 
-		fpmas::model::Model<SYNC_MODE> model;
-		rank = model.getMpiCommunicator().getRank();
+			fpmas::api::model::Model* model;
+		switch(config.sync_mode) {
+			case GHOST:
+				model = new fpmas::model::Model<GhostMode>;
+				break;
+			case HARD_SYNC:
+				model = new fpmas::model::Model<HardSyncMode>;
+				break;
+		}
+		rank = model->getMpiCommunicator().getRank();
 
 		fpmas::model::Behavior<City> city_behavior {&City::migrate_population};
-		auto& city_group = model.buildGroup(CITY, city_behavior);
+		auto& city_group = model->buildGroup(CITY, city_behavior);
 		fpmas::model::Behavior<Disease> disease_behavior {&Disease::propagate_virus};
-		auto& disease_group = model.buildGroup(DISEASE, disease_behavior);
+		auto& disease_group = model->buildGroup(DISEASE, disease_behavior);
 
-		GraphSyncProbe graph_sync_probe(model.graph());
+		GraphSyncProbe graph_sync_probe(model->graph());
 		city_group.agentExecutionJob().setEndTask(graph_sync_probe);
 
 		// Initializes the model on proc 0
-		FPMAS_ON_PROC(model.getMpiCommunicator(), 0) {
+		FPMAS_ON_PROC(model->getMpiCommunicator(), 0) {
 			// Initializes random distribution
 			fpmas::random::mt19937 rd;
 			fpmas::random::PoissonDistribution<std::size_t> edge_distrib(config.k);
@@ -57,27 +61,27 @@ int main(int argc, char** argv) {
 			switch(config.graph_mode) {
 				case UNIFORM:
 					{
-						FPMAS_LOGI(model.getMpiCommunicator().getRank(), "MACROPOP", "Initializing uniform city graph...");
+						FPMAS_LOGI(model->getMpiCommunicator().getRank(), "MACROPOP", "Initializing uniform city graph...");
 						// Automatic graph builder
 						fpmas::graph::UniformGraphBuilder<fpmas::model::AgentPtr>
 							generator (rd, edge_distrib);
 
 						// Automatically builds a graph from the cities provided to
 						// `city_builder`
-						generator.build(city_builder, CITY_TO_CITY, model.graph());
+						generator.build(city_builder, CITY_TO_CITY, model->graph());
 						break;
 					}
 
 				case CLUSTERED:
 					{
-						FPMAS_LOGI(model.getMpiCommunicator().getRank(), "MACROPOP", "Initializing clustered city graph...");
+						FPMAS_LOGI(model->getMpiCommunicator().getRank(), "MACROPOP", "Initializing clustered city graph...");
 						fpmas::random::UniformRealDistribution<double> location_dist(0, 1000);
 						fpmas::graph::ClusteredGraphBuilder<fpmas::model::AgentPtr> generator
 							(rd, edge_distrib, location_dist, location_dist);
 
 						// Automatically builds a graph from the cities provided to
 						// `city_builder`
-						generator.build(city_builder, CITY_TO_CITY, model.graph());
+						generator.build(city_builder, CITY_TO_CITY, model->graph());
 						break;
 					}
 			}
@@ -86,7 +90,7 @@ int main(int argc, char** argv) {
 			for(auto city : city_group.agents()) {
 				Disease* disease = new Disease(config.alpha, config.beta);
 				disease_group.add(disease);
-				model.link(disease, city, DISEASE_TO_CITY);
+				model->link(disease, city, DISEASE_TO_CITY);
 			}
 		}
 
@@ -94,20 +98,20 @@ int main(int argc, char** argv) {
 
 		// Output job
 		GlobalPopulationOutput model_output (
-				config.output_file, model, model.getMpiCommunicator());
+				config.output_file, *model, model->getMpiCommunicator());
 
 		// Performs load balancing at the beginning of the simulation
-		model.scheduler().schedule(0, model.loadBalancingJob());
+		model->scheduler().schedule(0, model->loadBalancingJob());
 
 		// Schedules agents and output jobs
-		model.scheduler().schedule(0, 1, city_group.jobs());
-		model.scheduler().schedule(0, 1, disease_group.jobs());
-		model.scheduler().schedule(0, 1, model_output.job());
+		model->scheduler().schedule(0, 1, city_group.jobs());
+		model->scheduler().schedule(0, 1, disease_group.jobs());
+		model->scheduler().schedule(0, 1, model_output.job());
 
 		// Runs the model simulation
-		model.runtime().run(config.max_step);
+		model->runtime().run(config.max_step);
 
-		ProbeOutput perf_output("perf.%r.csv", model.getMpiCommunicator().getRank());
+		ProbeOutput perf_output("perf.%r.csv", model->getMpiCommunicator().getRank());
 		perf_output.dump();
 	}
 
