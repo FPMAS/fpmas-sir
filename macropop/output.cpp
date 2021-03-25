@@ -3,6 +3,35 @@
 
 namespace macropop {
 
+	ProbeOutput::ProbeOutput(std::string file_name, int rank)
+		: FileOutput(file_name, rank), CsvOutput(
+				this->file,
+				{"behavior_time", [] () {
+				return std::chrono::duration_cast<time_unit>(
+						City::monitor.totalDuration(City::BEHAVIOR_PROBE));
+				}},
+				{"comm_time", [] () {
+				return std::chrono::duration_cast<time_unit>(
+						City::monitor.totalDuration(City::COMM_PROBE));
+				}},
+				{"distant_comm_time", [] () {
+				return std::chrono::duration_cast<time_unit>(
+						City::monitor.totalDuration(City::DISTANT_COMM_PROBE));
+				}},
+				{"sync_time", [] () {
+				return std::chrono::duration_cast<time_unit>(
+						City::monitor.totalDuration(City::SYNC_PROBE));
+				}},
+				{"comm_count", [] () {
+				return City::monitor.callCount(City::COMM_PROBE);
+				}},
+				{"distant_comm_count", [] () {
+				return City::monitor.callCount(City::DISTANT_COMM_PROBE);
+				}}
+				)
+		{
+		}
+
 	GlobalPopulationOutput::GlobalPopulationOutput(
 			std::string output_file,
 			fpmas::api::model::Model& model,

@@ -34,6 +34,9 @@ int main(int argc, char** argv) {
 		auto& city_group = model.buildGroup(CITY);
 		auto& disease_group = model.buildGroup(DISEASE);
 
+		GraphSyncProbe graph_sync_probe(model.graph());
+		city_group.agentExecutionJob().setEndTask(graph_sync_probe);
+
 		// Initializes the model on proc 0
 		FPMAS_ON_PROC(model.getMpiCommunicator(), 0) {
 			// Initializes random distribution
@@ -103,6 +106,9 @@ int main(int argc, char** argv) {
 
 		// Runs the model simulation
 		model.runtime().run(config.max_step);
+
+		ProbeOutput perf_output("perf.%r.csv", model.getMpiCommunicator().getRank());
+		perf_output.dump();
 	}
 
 	fpmas::finalize();

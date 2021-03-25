@@ -34,17 +34,37 @@ namespace macropop {
 		population.R = j.at("R").get<double>();
 	}
 
+	fpmas::utils::perf::Monitor City::monitor;
+	std::string City::BEHAVIOR_PROBE = "city_behavior";
+	std::string City::COMM_PROBE = "city_comm";
+	std::string City::DISTANT_COMM_PROBE = "city_distant_comm";
+	std::string City::SYNC_PROBE = "sync";
+	fpmas::utils::perf::Probe City::behavior_probe {BEHAVIOR_PROBE};
+	fpmas::utils::perf::Probe City::comm_probe {COMM_PROBE};
+	fpmas::utils::perf::Probe City::sync_probe {SYNC_PROBE};
+
 	/**
 	 * Migrate population from this city to the neighbor city, according to the
 	 * city migration rates.
 	 */
 	void City::migrate(double m, City* neighbor_city) {
+		// This probe is initialized at each migrate call, depending on the
+		// input `neighbor_city`
+		fpmas::utils::perf::Probe distant_comm_probe {
+			DISTANT_COMM_PROBE,
+			[neighbor_city] () {
+				return neighbor_city->node()->state() == fpmas::api::graph::DISTANT;
+			}
+		};
 		// Population to migrate
 		Population migration;
 		{
 			// First, lock this city, to avoid other cities to migrate
 			// population to it.
+			this->comm_probe.start();
 			fpmas::model::LockGuard lock(this);
+			this->comm_probe.end();
+
 			// Computes migration
 			migration = {
 				g_s * m * this->population.S,
@@ -55,20 +75,41 @@ namespace macropop {
 			this->population -= migration;
 
 			// End of `lock` scope : automatically unlocks this city
-		}
-		// Then, acquire the target city
-		fpmas::model::AcquireGuard acquire(neighbor_city);
-		// Safely add population to the target city
-		neighbor_city->population += migration;
 
-		// End of `acquire` scope : automatically releases and commits write
-		// operations on `neighbor_city`
+			this->comm_probe.start();
+		}
+		this->comm_probe.end();
+
+		{
+			// Then, acquires the target city
+			this->comm_probe.start();
+			distant_comm_probe.start();
+			fpmas::model::AcquireGuard acquire(neighbor_city);
+			distant_comm_probe.end();
+			this->comm_probe.end();
+
+			// Safely add population to the target city
+			neighbor_city->population += migration;
+
+			// End of `acquire` scope : automatically releases and commits write
+			// operations on `neighbor_city`
+			this->comm_probe.start();
+			distant_comm_probe.start();
+		}
+		distant_comm_probe.end();
+		this->comm_probe.end();
+
+		// Commits all probed values
+		City::monitor.commit(this->comm_probe);
+		City::monitor.commit(distant_comm_probe);
 	}
 
 	/**
 	 * City Agent Behavior.
 	 */
 	void City::act() {
+		this->behavior_probe.start();
+
 		// Get City neighbors
 		auto neighbors = outNeighbors<City>(CITY_TO_CITY);
 		// The same population amount is sent to each city
@@ -82,6 +123,9 @@ namespace macropop {
 		FPMAS_LOGI(this->model()->graph().getMpiCommunicator().getRank(),
 				"CITY", "Updated city population : %f",
 				this->population.N());
+
+		this->behavior_probe.end();
+		City::monitor.commit(behavior_probe);
 	}
 
 	void City::to_json(::nlohmann::json& j, const City* city) {
@@ -97,6 +141,13 @@ namespace macropop {
 				json.at("g_s").get<double>(),
 				json.at("g_i").get<double>(),
 				json.at("g_r").get<double>());
+	}
+
+	void GraphSyncProbe::run() {
+		City::sync_probe.start();
+		sync_graph_task.run();
+		City::sync_probe.end();
+		City::monitor.commit(City::sync_probe);
 	}
 
 	const double Disease::delta_t {0.1};

@@ -1,5 +1,6 @@
 #include "fpmas/model/model.h"
 #include "fpmas/model/serializer.h"
+#include "fpmas/utils/perf.h"
 
 namespace macropop {
 	FPMAS_DEFINE_GROUPS(CITY,DISEASE);
@@ -41,6 +42,15 @@ namespace macropop {
 			void migrate(double m, City*);
 
 		public:
+			static fpmas::utils::perf::Monitor monitor;
+			static std::string BEHAVIOR_PROBE;
+			static std::string COMM_PROBE;
+			static std::string DISTANT_COMM_PROBE;
+			static std::string SYNC_PROBE;
+			static fpmas::utils::perf::Probe behavior_probe;
+			static fpmas::utils::perf::Probe comm_probe;
+			static fpmas::utils::perf::Probe sync_probe;
+
 			/**
 			 * Current city population
 			 */
@@ -68,6 +78,16 @@ namespace macropop {
 
 			static void to_json(::nlohmann::json& j, const City* city);
 			static City* from_json(const ::nlohmann::json& json);
+	};
+
+	class GraphSyncProbe : public fpmas::api::scheduler::Task {
+		private:
+			fpmas::model::detail::SynchronizeGraphTask sync_graph_task;
+
+		public:
+			GraphSyncProbe(fpmas::api::model::AgentGraph& graph)
+				: sync_graph_task(graph) {}
+			void run() override;
 	};
 
 	/**
