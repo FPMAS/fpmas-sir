@@ -4,8 +4,6 @@ project(fpmas-sir-model VERSION 1.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(MPI REQUIRED)
-
 set(CMAKE_CXX_DEBUG_FLAGS "${CMAKE_CXX_DEBUG_FLAGS} -g -O0")
 
 include_directories(
