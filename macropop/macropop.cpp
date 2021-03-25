@@ -63,7 +63,7 @@ namespace macropop {
 			// population to it.
 			this->comm_probe.start();
 			fpmas::model::LockGuard lock(this);
-			this->comm_probe.end();
+			this->comm_probe.stop();
 
 			// Computes migration
 			migration = {
@@ -78,15 +78,15 @@ namespace macropop {
 
 			this->comm_probe.start();
 		}
-		this->comm_probe.end();
+		this->comm_probe.stop();
 
 		{
 			// Then, acquires the target city
 			this->comm_probe.start();
 			distant_comm_probe.start();
 			fpmas::model::AcquireGuard acquire(neighbor_city);
-			distant_comm_probe.end();
-			this->comm_probe.end();
+			distant_comm_probe.stop();
+			this->comm_probe.stop();
 
 			// Safely add population to the target city
 			neighbor_city->population += migration;
@@ -96,8 +96,8 @@ namespace macropop {
 			this->comm_probe.start();
 			distant_comm_probe.start();
 		}
-		distant_comm_probe.end();
-		this->comm_probe.end();
+		distant_comm_probe.stop();
+		this->comm_probe.stop();
 
 		// Commits all probed values
 		City::monitor.commit(this->comm_probe);
@@ -124,7 +124,7 @@ namespace macropop {
 				"CITY", "Updated city population : %f",
 				this->population.N());
 
-		this->behavior_probe.end();
+		this->behavior_probe.stop();
 		City::monitor.commit(behavior_probe);
 	}
 
@@ -146,7 +146,7 @@ namespace macropop {
 	void GraphSyncProbe::run() {
 		City::sync_probe.start();
 		sync_graph_task.run();
-		City::sync_probe.end();
+		City::sync_probe.stop();
 		City::monitor.commit(City::sync_probe);
 	}
 
