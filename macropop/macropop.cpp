@@ -107,7 +107,7 @@ namespace macropop {
 	/**
 	 * City Agent Behavior.
 	 */
-	void City::act() {
+	void City::migrate_population() {
 		this->behavior_probe.start();
 
 		// Get City neighbors
@@ -155,7 +155,7 @@ namespace macropop {
 	/**
 	 * Disease Agent Behavior.
 	 */
-	void Disease::act() {
+	void Disease::propagate_virus() {
 		// Access the first (and only) neighbor city
 		auto city = outNeighbors<City>(DISEASE_TO_CITY)[0];
 

@@ -27,47 +27,42 @@ namespace macropop {
 				}},
 				{"distant_comm_count", [] () {
 				return City::monitor.callCount(City::DISTANT_COMM_PROBE);
-				}}
-				)
-		{
+			 }}
+	)
+	{
+	}
+
+	const Population& GlobalPopulationOutput::total_population() {
+		if(model.runtime().currentDate() >= buffer_date) {
+			buffer_date = model.runtime().currentDate();
+			this->total_population_buffer = Population(0, 0, 0);
+			auto& city_group = model.getGroup(CITY);
+			for(auto city : city_group.localAgents()) {
+				this->total_population_buffer += dynamic_cast<City*>(city)->population;
+			}
 		}
+		return this->total_population_buffer;
+	}
 
 	GlobalPopulationOutput::GlobalPopulationOutput(
 			std::string output_file,
 			fpmas::api::model::Model& model,
-			fpmas::api::communication::MpiCommunicator& comm)
-		: output_file(output_file), model(model), comm(comm), mpi(comm) {
-			FPMAS_ON_PROC(comm, 0) {
-				std::ofstream outfile(output_file, std::ios::out | std::ios::trunc);
-				outfile << "T,S,I,R,N" << std::endl;
-			}
+			fpmas::api::communication::MpiCommunicator& comm) :
+		model(model),
+		FileOutput(output_file),
+		DistributedCsvOutput(comm, 0, this->file,
+				{"T", [&model] () {return model.runtime().currentDate();}},
+				{"S", [this, &model] () {
+				return total_population().S;
+				}},
+				{"I", [this, &model] () {
+				return total_population().I;
+				}},
+				{"R", [this, &model] () {
+				return total_population().R;
+				}},
+				{"N", [this, &model] () {
+				return total_population().N();
+				}}) {
 		}
-
-	void GlobalPopulationOutput::run() {
-		Population total_population;
-		auto& city_group = model.getGroup(CITY);
-		for(auto city : city_group.localAgents()) {
-			total_population += dynamic_cast<City*>(city)->population;
-		}
-
-		FPMAS_ON_PROC(comm, 0) {
-			std::ofstream outfile(output_file, std::ios::out | std::ios::app);
-
-			auto total_population_vec = mpi.gather(total_population, 0);
-
-			Population total_sum = std::accumulate(
-					total_population_vec.begin(),
-					total_population_vec.end(),
-					Population());
-
-			outfile <<
-				model.runtime().currentDate() << "," <<
-				total_sum.S << "," <<
-				total_sum.I << "," <<
-				total_sum.R << "," <<
-				total_sum.S + total_sum.I + total_sum.R << std::endl;
-		} else {
-			mpi.gather(total_population, 0);
-		}
-	}
 }

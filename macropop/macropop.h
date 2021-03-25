@@ -74,7 +74,7 @@ namespace macropop {
 				)
 				: population(population), g_s(g_s), g_i(g_i), g_r(g_r) {}
 
-			void act() override;
+			void migrate_population();
 
 			static void to_json(::nlohmann::json& j, const City* city);
 			static City* from_json(const ::nlohmann::json& json);
@@ -118,7 +118,7 @@ namespace macropop {
 			Disease(double alpha, double beta)
 				: alpha(alpha), beta(beta) {}
 
-			void act() override;
+			void propagate_virus();
 
 			static void to_json(::nlohmann::json& j, const Disease* disease);
 			static Disease* from_json(const ::nlohmann::json& json);

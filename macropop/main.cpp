@@ -31,8 +31,10 @@ int main(int argc, char** argv) {
 		fpmas::model::Model<SYNC_MODE> model;
 		rank = model.getMpiCommunicator().getRank();
 
-		auto& city_group = model.buildGroup(CITY);
-		auto& disease_group = model.buildGroup(DISEASE);
+		fpmas::model::Behavior<City> city_behavior {&City::migrate_population};
+		auto& city_group = model.buildGroup(CITY, city_behavior);
+		fpmas::model::Behavior<Disease> disease_behavior {&Disease::propagate_virus};
+		auto& disease_group = model.buildGroup(DISEASE, disease_behavior);
 
 		GraphSyncProbe graph_sync_probe(model.graph());
 		city_group.agentExecutionJob().setEndTask(graph_sync_probe);
@@ -91,18 +93,16 @@ int main(int argc, char** argv) {
 		// Executed on all procs
 
 		// Output job
-		fpmas::scheduler::Job output_job;
-		GlobalPopulationOutput output_task (
+		GlobalPopulationOutput model_output (
 				config.output_file, model, model.getMpiCommunicator());
-		output_job.add(output_task);
 
 		// Performs load balancing at the beginning of the simulation
 		model.scheduler().schedule(0, model.loadBalancingJob());
 
 		// Schedules agents and output jobs
-		model.scheduler().schedule(0, 1, city_group.job());
-		model.scheduler().schedule(0, 1, disease_group.job());
-		model.scheduler().schedule(0, 1, output_job);
+		model.scheduler().schedule(0, 1, city_group.jobs());
+		model.scheduler().schedule(0, 1, disease_group.jobs());
+		model.scheduler().schedule(0, 1, model_output.job());
 
 		// Runs the model simulation
 		model.runtime().run(config.max_step);

@@ -20,18 +20,26 @@ namespace macropop {
 			ProbeOutput(std::string file_name, int rank);
 	};
 
-	class GlobalPopulationOutput : public fpmas::api::scheduler::Task {
-		private:
-			std::string output_file;
-			fpmas::api::model::Model& model;
-			fpmas::api::communication::MpiCommunicator& comm;
-			fpmas::communication::TypedMpi<Population> mpi;
-		public:
-			GlobalPopulationOutput(
-					std::string output_file,
-					fpmas::api::model::Model& model,
-					fpmas::api::communication::MpiCommunicator& comm);
+	class GlobalPopulationOutput :
+		public FileOutput,
+		public DistributedCsvOutput<
+		Local<fpmas::scheduler::TimeStep>,
+		Reduce<double>,
+		Reduce<double>,
+		Reduce<double>,
+		Reduce<double>
+		> {
+			private:
+				fpmas::api::model::Model& model;
+				fpmas::scheduler::Date buffer_date {};
+				Population total_population_buffer;
 
-			void run() override;
-	};
+				const Population& total_population();
+
+			public:
+				GlobalPopulationOutput(
+						std::string output_file,
+						fpmas::api::model::Model& model,
+						fpmas::api::communication::MpiCommunicator& comm);
+		};
 }
