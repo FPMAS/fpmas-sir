@@ -47,8 +47,8 @@ namespace macropop {
 				std::exit(EXIT_FAILURE);
 			}
 		}
-		if(output_file_arg->count > 0)
-			output_file = std::string(output_file_arg->filename[0]);
+		if(output_dir_arg->count > 0)
+			output_dir = std::string(output_dir_arg->filename[0]);
 		if(max_step_arg->count > 0)
 			max_step = max_step_arg->ival[0];
 		if(sync_mode_arg->count > 0) {

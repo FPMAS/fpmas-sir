@@ -30,8 +30,8 @@ namespace macropop {
 				= arg_intn("k", "graph-degree", "<n>", 0, 1, "Average count of target cities of each city (default: 6)");
 			struct arg_str* graph_mode_arg
 				= arg_strn("m", "graph-mode", "<graph-mode>", 0, 1, "Graph builder mode : 'clustered' or 'uniform' (default: clustered)");
-			struct arg_file* output_file_arg
-				= arg_filen("o", "output-file", "<file>", 0, 1, "CSV output file (default: 'output.csv')");
+			struct arg_file* output_dir_arg
+				= arg_filen("o", "output-dir", "<dir>", 0, 1, "Output directory (default: current directory)");
 			struct arg_int* max_step_arg
 				= arg_intn("s", "max-step", "<n>", 0, 1, "Number of time steps to run (default: 1000)");
 			struct arg_str* sync_mode_arg
@@ -47,7 +47,7 @@ namespace macropop {
 				beta_arg,
 				k_arg,
 				graph_mode_arg,
-				output_file_arg,
+				output_dir_arg,
 				max_step_arg,
 				sync_mode_arg,
 				end
@@ -63,7 +63,7 @@ namespace macropop {
 			double beta = 0.5;
 			std::size_t k = 6;
 			GraphMode graph_mode = CLUSTERED;
-			std::string output_file = "output.csv";
+			std::string output_dir = "";
 			int max_step = 1000;
 			SyncMode sync_mode = HARD_SYNC;
 

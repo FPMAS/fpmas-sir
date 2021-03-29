@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
 
 		// Output job
 		GlobalPopulationOutput model_output (
-				config.output_file, *model, model->getMpiCommunicator());
+				config.output_dir + "output.csv", *model, model->getMpiCommunicator());
 
 		// Performs load balancing at the beginning of the simulation
 		model->scheduler().schedule(0, model->loadBalancingJob());
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 		// Runs the model simulation
 		model->runtime().run(config.max_step);
 
-		ProbeOutput perf_output("perf.%r.csv", model->getMpiCommunicator().getRank());
+		ProbeOutput perf_output(config.output_dir + "perf.%r.csv", model->getMpiCommunicator().getRank());
 		perf_output.dump();
 	}
 
