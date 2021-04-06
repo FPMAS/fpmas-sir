@@ -15,7 +15,7 @@ if __name__ == "__main__":
     for num_agent in ["10000", "100000"]:
         for k in ["3", "4", "6"]:
             for mode in ["ghost", "hard_sync"]:
-                for proc in ["2", "4", "8", "16", "32"]:
+                for proc in ["1", "2", "4", "8", "16", "32"]:
                     jobs = [str(random.randint(300000, 400000)) for i in range(0, 5)]
                     for job in jobs:
                         path =  root / num_agent / k / mode / proc / job

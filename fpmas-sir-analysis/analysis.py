@@ -38,7 +38,6 @@ def read_data(root_dir, k_values, n_cities):
                     if num_agent_dir.is_dir()]
             for k_dir in k_dirs:
                 k = int(k_dir.stem)
-                print(k_values)
                 if k_values==None or len(k_values)==0 or k in k_values:
                     data[num_agent][k] = {}
 
@@ -55,12 +54,12 @@ def read_data(root_dir, k_values, n_cities):
                             num_proc = int(num_proc_dir.stem)
                             data[num_agent][k][mode][num_proc] = []
 
-                            job_ids = [int(job_dir.stem) for job_dir in num_proc_dir.iterdir()]
-                            job_id = max(job_ids)
-                            output = num_proc_dir / str(job_id) / "time.out"
-                            with open(output, "r") as time_file:
-                                for time in time_file:
-                                    data[num_agent][k][mode][num_proc].append(float(time))
+                            job_dirs = [job_dir for job_dir in num_proc_dir.iterdir()]
+                            for job_dir in job_dirs:
+                                output = job_dir / "time.out"
+                                with open(output, "r") as time_file:
+                                    for time in time_file:
+                                        data[num_agent][k][mode][num_proc].append(float(time))
     return data
 
 def mean_data(time_data):
@@ -81,12 +80,13 @@ def min_max_data(time_data):
     return mean
 
 
-
-def plot(mean_data, min_max_data):
-    plt.suptitle("Execution times of the distributed SIR model simulation")
+def plot_data(title, ylabel, mean_data, min_max_data):
+    plt.suptitle(title)
     index=1
     num_rows=len(mean_data)
     markers={"ghost": "o", "hard_sync": "x"}
+
+    procs=[]
     for (num_agent, num_agent_data) in mean_data.items():
         plt.subplot(num_rows, 1, index)
         index+=1
@@ -94,6 +94,8 @@ def plot(mean_data, min_max_data):
         for (k, k_data) in num_agent_data.items():
             for (mode, mode_data) in k_data.items():
                 data = dict(sorted(mode_data.items(), key=operator.itemgetter(0)))
+                procs=list(data.keys())
+
                 error_list = dict(sorted(min_max_data[num_agent][k][mode].items(), key=operator.itemgetter(0)))
                 errors = [[abs(data[proc] - error_list[proc][j]) for proc in \
                     data.keys()] for j in [0, 1]]
@@ -104,9 +106,39 @@ def plot(mean_data, min_max_data):
                     marker=markers[mode])
         plt.legend()
         plt.xlabel("Number of cores")
-        plt.ylabel("Execution time (seconds)")
+        plt.ylabel(ylabel)
+        plt.xticks(procs)
 
-    plt.show()
+def plot_exec_time(mean_data, min_max_data):
+    plot_data(
+            "Execution times of the distributed SIR model simulation",
+            "Execution time (seconds)",
+            mean_data, min_max_data)
+    
+def plot_speed_up(mean_data, min_max_data):
+    mean_data_cpy = mean_data.copy()
+    min_max_data_cpy = min_max_data.copy()
+    for (num_agent, num_agent_data) in mean_data_cpy.items():
+        mean_data_cpy[num_agent] = num_agent_data.copy()
+        min_max_data_cpy[num_agent] = min_max_data[num_agent].copy()
+        for (k, k_data) in mean_data_cpy[num_agent].items():
+            num_agent_data[k] = k_data.copy()
+            min_max_data_cpy[num_agent][k] = min_max_data[num_agent][k].copy()
+            for (mode, mode_data) in num_agent_data[k].items():
+                k_data[mode] = mode_data.copy()
+                min_max_data_cpy[num_agent][k][mode] = min_max_data[num_agent][k][mode].copy()
+                t_0 = k_data[mode][1]
+                for proc in k_data[mode].keys():
+                    k_data[mode][proc] = t_0 / k_data[mode][proc]
+                    min_max_data_cpy[num_agent][k][mode][proc] = (
+                            t_0/min_max_data_cpy[num_agent][k][mode][proc][0],
+                            t_0/min_max_data_cpy[num_agent][k][mode][proc][1]
+                            )
+
+    plot_data(
+            "Speed up for the distributed SIR model simulation",
+            "Speed up",
+            mean_data_cpy, min_max_data_cpy)
 
 def build_parser():
     parser = argparse.ArgumentParser()
@@ -130,10 +162,14 @@ if __name__ == "__main__":
     root_dir = args.results_dir 
     print("Reading data from \"" + root_dir + "\"")
     time_data = read_data(root_dir, args.k_values, args.n_cities)
-    print("Raw time data : " + str(time_data))
+    # print("Raw time data : " + str(time_data))
     mean_data = mean_data(time_data)
-    print("Mean times : " + str(mean_data))
+    # print("Mean times : " + str(mean_data))
     min_max_data = min_max_data(time_data)
-    print("Min max times : " + str(min_max_data))
-    plot(mean_data, min_max_data)
+    # print("Min max times : " + str(min_max_data))
+    plot_exec_time(mean_data, min_max_data)
+    plt.figure()
+    plot_speed_up(mean_data, min_max_data)
+
+    plt.show()
 

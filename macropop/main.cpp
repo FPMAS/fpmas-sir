@@ -43,32 +43,38 @@ int main(int argc, char** argv) {
 		GraphSyncProbe graph_sync_probe(model->graph());
 		city_group.agentExecutionJob().setEndTask(graph_sync_probe);
 
-		// Initializes the model on proc 0
-		FPMAS_ON_PROC(model->getMpiCommunicator(), 0) {
+		fpmas::utils::perf::Probe init_probe("init_time");
+
+		// Model initialization
+		{
+			init_probe.start();
+
 			// Initializes random distribution
-			fpmas::random::mt19937 rd;
+			fpmas::random::DistributedGenerator<> rd;
 			fpmas::random::PoissonDistribution<std::size_t> edge_distrib(config.k);
 
 			// Agent builder that will build cities
-			fpmas::model::AgentNodeBuilder city_builder(city_group);
-			for(std::size_t i = 0; i < config.city_count; i++) {
-				// Initializes a new city
-				city_builder.push(new City(
+			fpmas::model::DistributedAgentNodeBuilder city_builder(
+					city_group, config.city_count,
+					[&config] () {return new City(
 							{config.average_population, config.initial_infected, 0},
-							0.12, 0.12, 0.12));
-			}
-
+							0.12, 0.12, 0.12);
+					},
+					[] () {return new City;},
+					model->getMpiCommunicator()
+					);
+			
 			switch(config.graph_mode) {
 				case UNIFORM:
 					{
 						FPMAS_LOGI(model->getMpiCommunicator().getRank(), "MACROPOP", "Initializing uniform city graph...");
 						// Automatic graph builder
-						fpmas::graph::UniformGraphBuilder<fpmas::model::AgentPtr>
-							generator (rd, edge_distrib);
+						fpmas::graph::DistributedUniformGraphBuilder<fpmas::model::AgentPtr>
+							graph_builder (rd, edge_distrib);
 
-						// Automatically builds a graph from the cities provided to
-						// `city_builder`
-						generator.build(city_builder, CITY_TO_CITY, model->graph());
+						// Automatically builds a graph using `city_builder` to
+						// generate Agents
+						graph_builder.build(city_builder, CITY_TO_CITY, model->graph());
 						break;
 					}
 
@@ -76,37 +82,51 @@ int main(int argc, char** argv) {
 					{
 						FPMAS_LOGI(model->getMpiCommunicator().getRank(), "MACROPOP", "Initializing clustered city graph...");
 						fpmas::random::UniformRealDistribution<double> location_dist(0, 1000);
-						fpmas::graph::ClusteredGraphBuilder<fpmas::model::AgentPtr> generator
-							(rd, edge_distrib, location_dist, location_dist);
+						fpmas::graph::DistributedClusteredGraphBuilder<fpmas::model::AgentPtr> graph_builder(
+								rd, edge_distrib, location_dist, location_dist
+								);
 
-						// Automatically builds a graph from the cities provided to
-						// `city_builder`
-						generator.build(city_builder, CITY_TO_CITY, model->graph());
+						// Automatically builds a graph using `city_builder` to
+						// generate Agents
+						graph_builder.build(city_builder, CITY_TO_CITY, model->graph());
 						break;
 					}
 			}
 
 			// Associates a disease to each city
-			for(auto city : city_group.agents()) {
+			for(auto city : city_group.localAgents()) {
 				Disease* disease = new Disease(config.alpha, config.beta);
 				disease_group.add(disease);
 				model->link(disease, city, DISEASE_TO_CITY);
 			}
+			model->graph().synchronize();
 		}
-
-		// Executed on all procs
 
 		// Output job
 		GlobalPopulationOutput model_output (
 				config.output_dir + "output.csv", *model, model->getMpiCommunicator());
 
+		fpmas::scheduler::detail::LambdaTask stop_probe_task([&init_probe, &config] () {
+				init_probe.stop();
+				fpmas::io::FileOutput file_output(config.output_dir + "init_time.txt");
+				file_output.file <<
+					std::chrono::duration_cast<macropop::time_unit>(
+							// Only one duration is measured, so it's useless
+							// to commit it
+							init_probe.durations().back()
+							).count()
+					<< std::endl;
+				});
+		fpmas::scheduler::Job stop_probe_job({stop_probe_task});
+
 		// Performs load balancing at the beginning of the simulation
 		model->scheduler().schedule(0, model->loadBalancingJob());
+		model->scheduler().schedule(0.1, stop_probe_job);
 
 		// Schedules agents and output jobs
-		model->scheduler().schedule(0, 1, city_group.jobs());
-		model->scheduler().schedule(0, 1, disease_group.jobs());
-		model->scheduler().schedule(0, 1, model_output.job());
+		model->scheduler().schedule(0.2, 1, city_group.jobs());
+		model->scheduler().schedule(0.2, 1, disease_group.jobs());
+		model->scheduler().schedule(0.2, 1, model_output.job());
 
 		// Runs the model simulation
 		model->runtime().run(config.max_step);

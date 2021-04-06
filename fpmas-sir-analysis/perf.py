@@ -52,11 +52,19 @@ def read_perf(data, num_proc, jobs_dir):
                         values[key].append(int(row[key]))
 
         for key in values.keys():
-            data[key].append((
-                    sum(values[key]) / num_proc,
-                    min(values[key]),
-                    max(values[key])
-                    ))
+            if re.match(r".*time.*", key):
+                data[key].append((
+                        sum(values[key]) / num_proc,
+                        min(values[key]),
+                        max(values[key])
+                        ))
+            elif re.match(r".*count.*", key):
+                data[key].append((
+                        sum(values[key]),
+                        sum(values[key]),
+                        sum(values[key])
+                        ))
+
 
 '''
 Reads raw data from the input directory.
@@ -161,8 +169,13 @@ label_pattern -- regex: used as a label filter. Data corresponding
 to each label is shown only if the label matches `label_pattern`.
 ylabel -- str: Label used for the Y axis
 '''
-def plot(dataset, label_pattern, ylabel, num_proc_scale=1.5):
-    plt.suptitle("Performance analysis of the distributed SIR model simulation")
+def plot(
+        title,
+        dataset, ylabel, num_proc_scale=1.5,
+        labels=[r".*"],
+        modes=[r".*"],
+        yscale="linear"):
+    plt.suptitle(title)
     # subplot index
     index=1
     # Number of rows in the subplot environment
@@ -191,11 +204,11 @@ def plot(dataset, label_pattern, ylabel, num_proc_scale=1.5):
             # Initializes the subplot for the current (n_agent, k) parameters
             ax = plt.subplot(num_rows, num_columns, index)
             plt.title(str(num_agent) + " cities (K=" + str(k) + ")")
+            plt.yscale(yscale)
             # increments subplot index for next subplot
             index+=1
 
             # Number of modes available for the current (n_agent, k) parameters
-            num_modes = len(k_data)
             mode_index = 0
             # Bars that will be plotted
             # Data are grouped by label, independently of the mode, with the
@@ -218,20 +231,40 @@ def plot(dataset, label_pattern, ylabel, num_proc_scale=1.5):
             # Brief labels (not very generic)
             mode_labels={"ghost": "G", "hard_sync": "H"}
 
-            for (mode, mode_data) in k_data.items():
+            filtered_modes=[]
+            for mode in k_data.keys():
+                match = False
+                i = 0
+                while(i < len(modes) and match==False):
+                    if re.match(modes[i], mode):
+                        filtered_modes.append(mode)
+                        match=True
+                    i+=1
+            num_modes = len(filtered_modes)
+
+            for mode in filtered_modes:
+                mode_data = k_data[mode]
                 # filtered data labels that will be plotted
-                labels = []
-                for (label, perf_data) in mode_data.items():
-                    if re.match(label_pattern, label):
-                        labels.append(label)
-                num_labels = len(labels)
+                filtered_labels = []
+                for label in mode_data.keys():
+                    match = False
+                    i = 0
+                    while(i < len(labels) and match==False):
+                        if re.match(labels[i], label):
+                            filtered_labels.append(label)
+                            match=True
+                        i+=1
+                num_labels = len(filtered_labels)
 
                 # Margin between bars associated to different modes
                 mode_margin = num_labels/2 * bar_width + .05
-                # Center position of bars associated to the current mode
-                mode_offset = mode_index * 2 * mode_margin / (num_modes-1) - mode_margin
+                mode_offset = 0
+                if num_modes > 1:
+                    # Center position of bars associated to the current mode
+                    mode_offset = mode_index * 2 * mode_margin / (num_modes-1) - mode_margin
+                    
                 label_index = 0
-                for label in labels:
+                for label in filtered_labels:
                     perf_data = mode_data[label]
                     if label not in bars_data:
                         # Initializes the bar data entry.
@@ -261,14 +294,15 @@ def plot(dataset, label_pattern, ylabel, num_proc_scale=1.5):
                                 )
                     label_index+=1
                 mode_index+=1
-                # Adds mode labels to each bar groups
-                for i in range(0, len(num_procs)):
-                    ax.annotate(mode_labels[mode],
-                            xy=(num_proc_scale*i + mode_offset, 0),
-                            xytext=(0, -16),
-                            textcoords="offset points",
-                            va="bottom",
-                            ha="center")
+                if num_modes > 1:
+                    # Adds mode labels to each bar groups
+                    for i in range(0, len(num_procs)):
+                        ax.annotate(mode_labels[mode],
+                                xy=(num_proc_scale*i + mode_offset, 0),
+                                xytext=(0, -16),
+                                textcoords="offset points",
+                                va="bottom",
+                                ha="center")
 
 
                 # Show ticks for each number of processes
@@ -291,11 +325,18 @@ def plot(dataset, label_pattern, ylabel, num_proc_scale=1.5):
 
 def plot_times(dataset):
     """ Plots time data from the input dataset """
-    plot(dataset, r".*time.*", "Times (seconds)")
+    plot(
+            "Time probe results of the distributed SIR model simulation",
+            dataset, "Times (seconds)", labels=[r".*time.*"])
 
 def plot_counts(dataset):
     """ Plots call counts data from the input dataset """
-    plot(dataset, r".*count.*", "Call counts", num_proc_scale=0.7)
+    plot(
+            "Call counts for the distributed SIR model simulation",
+            dataset, "Call counts", num_proc_scale=0.7,
+            labels=[r".*count.*"],
+            modes=[r"ghost"],
+            yscale="log")
     
 
 '''
