@@ -108,17 +108,15 @@ int main(int argc, char** argv) {
 		GlobalPopulationOutput model_output (
 				config.output_dir + "output.csv", *model, model->getMpiCommunicator());
 
+		// Task run just after loadBalancingJob
 		fpmas::scheduler::detail::LambdaTask post_lb_task([&config, model] () {
 				TimeOutput::lb_probe.stop();
 				TimeOutput::init_probe.stop();
+
+				// After loadBalancingJob, start model execution
 				TimeOutput::run_probe.start();
 				});
 		fpmas::scheduler::Job post_lb_job({post_lb_task});
-
-		//fpmas::communication::MpiCommunicator comm;
-		//fpmas::graph::ZoltanLoadBalancing<fpmas::model::AgentPtr> lb(comm);
-		//model->graph().balance(lb, {});
-		//model->graph().synchronize();
 
 		// Performs load balancing at the beginning of the simulation
 		model->scheduler().schedule(0, model->loadBalancingJob());
@@ -130,24 +128,30 @@ int main(int argc, char** argv) {
 		model->scheduler().schedule(0.22, 1, model_output.job());
 
 		// Runs the model simulation
-		TimeOutput::lb_probe.start(); // First task executed
+		TimeOutput::lb_probe.start(); // LB = First task executed
 		model->runtime().run(config.max_step);
 		TimeOutput::run_probe.stop();
 
-		ProbeOutput perf_output(config.output_dir + "perf.%r.csv", model->getMpiCommunicator().getRank());
-		perf_output.dump();
+		// Performs behavior and distant comm times output
+		ProbeOutput(
+				config.output_dir + "perf.%r.csv",
+				model->getMpiCommunicator().getRank()
+				).dump();
 
+		// Commits all global time probes
 		TimeOutput::monitor.commit(TimeOutput::builder_probe);
 		TimeOutput::monitor.commit(TimeOutput::lb_probe);
 		TimeOutput::monitor.commit(TimeOutput::link_probe);
 		TimeOutput::monitor.commit(TimeOutput::init_probe);
 		TimeOutput::monitor.commit(TimeOutput::run_probe);
 
+		// Performs time output
 		TimeOutput(
 				config.output_dir + "time.csv",
 				model->getMpiCommunicator()
 				).dump();
 
+		// Performs load balancing stats output
 		LbOutput(
 				config.output_dir + "lb.%r.csv",
 				model->getMpiCommunicator().getRank(), model->graph()
