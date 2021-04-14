@@ -1,17 +1,8 @@
 #include "argtable3.h"
 #include <iostream>
+#include "config.h"
 
 namespace macropop {
-	enum GraphMode {
-		CLUSTERED,
-		UNIFORM
-	};
-
-	enum SyncMode {
-		GHOST,
-		HARD_SYNC
-	};
-
 	class Config {
 		private:
 			struct arg_lit* help
@@ -36,9 +27,11 @@ namespace macropop {
 				= arg_intn("s", "max-step", "<n>", 0, 1, "Number of time steps to run (default: 1000)");
 			struct arg_str* sync_mode_arg
 				= arg_strn("S", "sync-mode", "<sync-mode>", 0, 1, "Synchronization mode: 'ghost' or 'hard_sync' (default: hard_sync)");
+			struct arg_str* lb_method_arg
+				= arg_strn("l", "lb-method", "<lb-method>", 0, 1, "Load-balancing method: 'zoltan' or 'random' (default: zoltan)");
 			struct arg_end* end = arg_end(20);
 
-			void* argtable[12] = {
+			void* argtable[13] = {
 				help,
 				city_count_arg,
 				population_arg,
@@ -50,6 +43,7 @@ namespace macropop {
 				output_dir_arg,
 				max_step_arg,
 				sync_mode_arg,
+				lb_method_arg,
 				end
 			};
 
@@ -66,6 +60,7 @@ namespace macropop {
 			std::string output_dir = "";
 			int max_step = 1000;
 			SyncMode sync_mode = HARD_SYNC;
+			LbMethod lb_method = ZOLTAN;
 
 			Config(int argc, char** argv);
 

@@ -3,6 +3,7 @@ import numpy as np
 import sys
 import csv
 from pathlib import Path
+import argparse
 
 def read_csv(output_file):
     data = [[], [], [], [], []]
@@ -16,13 +17,20 @@ def read_csv(output_file):
             data[4].append(float(row["N"]))
     return data
 
-def plot(output_files):
+def plot(output_files, rows=-1, columns=1):
     index=1
     plt.figure()
-    num_rows=len(output_files)
+    if rows<0 and columns<0:
+        rows=1
+        columns=int(len(output_files))
+    elif rows<0:
+        rows = int(len(output_files)/columns)
+    elif columns<0:
+        columns=int(len(output_files)/rows)
+
     for output_file in output_files:
         data = read_csv(output_file)
-        plt.subplot(num_rows, 1, index)
+        plt.subplot(rows, columns, index)
         plt.title("SIR model simulation results (" +\
                 Path(output_file).stem + ")")
         plt.plot(data[0], data[1], label="Susceptible")
@@ -39,6 +47,21 @@ def plot(output_files):
         plt.legend()
     plt.show()
 
+def build_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+            'output_files', metavar='F', type=str, nargs='+',\
+                    help="Output files of the fpmas-sir-macropop simulation")
+    parser.add_argument(
+            '-r', '--n_rows', type=int, default=-1,\
+                    help="Number of rows in the subplot environment (default:1)")
+    parser.add_argument(
+            '-c', '--n_columns', type=int, default=-1,\
+                    help="Number of columns in the subplot environment\
+                    (default:number of output_files)")
+    return parser
+
 if __name__ == "__main__":
-    files = [sys.argv[i] for i in range(1, len(sys.argv))]
-    plot(files)
+    parser = build_parser()
+    args = parser.parse_args()
+    plot(args.output_files,rows=args.n_rows,columns=args.n_columns)

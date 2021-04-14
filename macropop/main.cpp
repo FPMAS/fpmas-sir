@@ -22,16 +22,16 @@ int main(int argc, char** argv) {
 	fpmas::init(argc, argv);
 	{
 		TimeOutput::init_probe.start();
-		// Register user-defined agent types
-		FPMAS_REGISTER_AGENT_TYPES(City, Disease)
+		// Registers user-defined agent types
+		FPMAS_REGISTER_AGENT_TYPES(City, Disease);
 
-			fpmas::api::model::Model* model;
+		fpmas::api::model::Model* model;
 		switch(config.sync_mode) {
 			case GHOST:
-				model = new fpmas::model::Model<GhostMode>;
+				model = new Model<GhostMode>(config.lb_method);
 				break;
 			case HARD_SYNC:
-				model = new fpmas::model::Model<HardSyncMode>;
+				model = new Model<HardSyncMode>(config.lb_method);
 				break;
 		}
 		rank = model->getMpiCommunicator().getRank();
@@ -54,11 +54,15 @@ int main(int argc, char** argv) {
 
 			// Agent builder that will build cities
 			fpmas::model::DistributedAgentNodeBuilder city_builder(
-					city_group, config.city_count,
+					city_group,
+					// Total city count
+					config.city_count,
+					// Local city builder
 					[&config] () {return new City(
 							{config.average_population, config.initial_infected, 0},
 							0.12, 0.12, 0.12);
 					},
+					// Distant city builder
 					[] () {return new City;},
 					model->getMpiCommunicator()
 					);
@@ -66,7 +70,10 @@ int main(int argc, char** argv) {
 			switch(config.graph_mode) {
 				case UNIFORM:
 					{
-						FPMAS_LOGI(model->getMpiCommunicator().getRank(), "MACROPOP", "Initializing uniform city graph...");
+						FPMAS_LOGI(
+								model->getMpiCommunicator().getRank(),
+								"MACROPOP", "Initializing uniform city graph..."
+								);
 						// Automatic graph builder
 						fpmas::graph::DistributedUniformGraphBuilder<fpmas::model::AgentPtr>
 							graph_builder (rd, edge_distrib);
@@ -79,7 +86,10 @@ int main(int argc, char** argv) {
 
 				case CLUSTERED:
 					{
-						FPMAS_LOGI(model->getMpiCommunicator().getRank(), "MACROPOP", "Initializing clustered city graph...");
+						FPMAS_LOGI(
+								model->getMpiCommunicator().getRank(),
+								"MACROPOP", "Initializing clustered city graph..."
+								);
 						fpmas::random::UniformRealDistribution<double> location_dist(0, 1000);
 						fpmas::graph::DistributedClusteredGraphBuilder<fpmas::model::AgentPtr> graph_builder(
 								rd, edge_distrib, location_dist, location_dist

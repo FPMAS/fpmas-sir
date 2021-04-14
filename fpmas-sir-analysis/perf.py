@@ -174,8 +174,11 @@ def plot(
         dataset, ylabel, num_proc_scale=1.5,
         labels=[r".*"],
         modes=[r".*"],
-        yscale="linear"):
-    plt.suptitle(title)
+        yscale="linear",
+        orientation='v',
+        enable_titles=True):
+    if enable_titles:
+        plt.suptitle(title)
     # subplot index
     index=1
     # Number of rows in the subplot environment
@@ -203,8 +206,15 @@ def plot(
         for (k, k_data) in num_agent_data.items():
             # Initializes the subplot for the current (n_agent, k) parameters
             ax = plt.subplot(num_rows, num_columns, index)
-            plt.title(str(num_agent) + " cities (K=" + str(k) + ")")
-            plt.yscale(yscale)
+            if enable_titles:
+                plt.title(str(num_agent) + " cities (K=" + str(k) + ")")
+            if orientation == 'v':
+                plt.yscale(yscale)
+            elif orientation == 'h':
+                plt.xscale(yscale)
+            plt.yticks(fontsize='x-large')
+            plt.xticks(fontsize='x-large')
+
             # increments subplot index for next subplot
             index+=1
 
@@ -227,7 +237,7 @@ def plot(
             # for any mode
             bars_data={}
             # Width of each bar
-            bar_width = .1
+            bar_width = .12
             # Brief labels (not very generic)
             mode_labels={"ghost": "G", "hard_sync": "H"}
 
@@ -273,8 +283,11 @@ def plot(
                         bars_data[label] = ([], [], [[], []])
 
                     # Computes positions of each bars
+                    revert = 1
+                    if orientation == 'h':
+                        revert = -1
                     x = [num_proc_scale*i + mode_offset\
-                            + bar_width*(label_index - float(num_labels-1) /2)\
+                            + revert * bar_width*(label_index - float(num_labels-1) /2)\
                             for i in range(0, len(num_procs))]
                     # Adds x values to current bars data
                     bars_data[label][0].extend(x)
@@ -297,46 +310,79 @@ def plot(
                 if num_modes > 1:
                     # Adds mode labels to each bar groups
                     for i in range(0, len(num_procs)):
-                        ax.annotate(mode_labels[mode],
-                                xy=(num_proc_scale*i + mode_offset, 0),
-                                xytext=(0, -16),
-                                textcoords="offset points",
-                                va="bottom",
-                                ha="center")
+                        if orientation == 'v':
+                            ax.annotate(mode_labels[mode],
+                                    xy=(num_proc_scale*i + mode_offset, 0),
+                                    xytext=(0, -16),
+                                    textcoords="offset points",
+                                    va="bottom",
+                                    ha="center")
+
+                        if orientation == 'h':
+                            ax.annotate(mode_labels[mode],
+                                    xy=(0, num_proc_scale*i + mode_offset),
+                                    xytext=(-16, 0),
+                                    textcoords="offset points",
+                                    va="center",
+                                    ha="right",
+                                    fontsize='large')
 
 
                 # Show ticks for each number of processes
-                ax.set_xticks([num_proc_scale*i\
-                        for i in range(0, len(num_procs))])
-                ax.set_xticklabels(num_procs)
+                if orientation == 'v':
+                    ax.set_xticks([num_proc_scale*i\
+                            for i in range(0, len(num_procs))])
+                    ax.set_xticklabels(num_procs)
+                elif orientation == 'h':
+                    ax.set_yticks([num_proc_scale*i\
+                            for i in range(0, len(num_procs))])
+                    y_labels = num_procs.copy()
+                    y_labels.reverse()
+                    ax.set_yticklabels(y_labels)
                 
             # Finally, plots bars for each label
             for (label, data) in bars_data.items():
-                ax.bar(
-                        data[0], data[1], yerr=data[2],
-                        align="center", width=bar_width, label=label
-                        )
+                if orientation=='v':
+                    ax.bar(
+                            data[0], data[1], yerr=data[2],
+                            align="center", width=bar_width, label=label
+                            )
+                elif orientation=='h':
+                    data[1].reverse()
+                    data[2][0].reverse()
+                    data[2][1].reverse()
+                    ax.barh(
+                            data[0], data[1], xerr=data[2],
+                            align="center", height=bar_width, label=label
+                            )
 
             if plt_legend:
-                ax.legend()
+                ax.legend(fontsize='x-large')
                 plt_legend = False
-            plt.xlabel("Number of cores")
-            plt.ylabel(ylabel)
+            if orientation=='v':
+                plt.xlabel("Number of cores", fontsize='large')
+                plt.ylabel(ylabel, fontsize='large')
+            elif orientation=='h':
+                plt.ylabel("Number of cores", fontsize='large')
+                plt.xlabel(ylabel, fontsize='large')
 
-def plot_times(dataset):
+
+def plot_times(dataset, **kwargs):
     """ Plots time data from the input dataset """
     plot(
             "Time probe results of the distributed SIR model simulation",
-            dataset, "Times (seconds)", labels=[r".*time.*"])
+            dataset, "Times (seconds)", labels=[r".*time.*"], **kwargs
+            )
 
-def plot_counts(dataset):
+def plot_counts(dataset, **kwargs):
     """ Plots call counts data from the input dataset """
     plot(
             "Call counts for the distributed SIR model simulation",
             dataset, "Call counts", num_proc_scale=0.7,
             labels=[r".*count.*"],
             modes=[r"ghost"],
-            yscale="log")
+            yscale="log",
+            **kwargs)
     
 
 '''
@@ -354,6 +400,10 @@ def build_parser():
     parser.add_argument(
             '-n', '--n_cities', type=int, nargs="*",\
                     help="Plots graphs for the specified city counts (default: plots all data)")
+    parser.add_argument(
+            '-o', '--orientation', type=str, nargs="?", default='v',\
+                    help="Plots horizontal ('h') or vertical ('v') bars (default: 'v')")
+    parser.add_argument('--no-titles', action='store_true')
     return parser
 
 
@@ -390,9 +440,15 @@ if __name__ == "__main__":
     # Builds performance dataset
     dataset = build_datasets(perf_data)
     # Plots time data
-    plot_times(dataset)
+    plot_times(dataset,
+            orientation=args.orientation,
+            enable_titles= not args.no_titles
+            )
     plt.figure() # Build a new matplotlib figure
     # Plots call counts data
-    plot_counts(dataset)
+    plot_counts(dataset,
+            orientation=args.orientation,
+            enable_titles= not args.no_titles
+            )
     # Show the two figures
     plt.show()

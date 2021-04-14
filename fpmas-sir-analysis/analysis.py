@@ -79,43 +79,63 @@ def min_max_data(time_data):
             for (num_agent, num_agent_data) in time_data.items()}
     return mean
 
+def num_procs(dataset):
+    procs=set([])
+    for num_agent_data in dataset.values():
+        for k_data in num_agent_data.values():
+            for mode_data in k_data.values():
+                for proc in mode_data.keys():
+                    procs.add(proc)
+    return sorted(list(procs))
 
-def plot_data(title, ylabel, mean_data, min_max_data):
-    plt.suptitle(title)
+def plot_data(title,
+        ylabel, mean_data, min_max_data,
+        yscale="linear",
+        other_data=[],
+        enable_titles=True):
+    if enable_titles:
+        plt.suptitle(title)
     index=1
     num_rows=len(mean_data)
     markers={"ghost": "o", "hard_sync": "x"}
 
-    procs=[]
+    procs=num_procs(mean_data)
     for (num_agent, num_agent_data) in mean_data.items():
         plt.subplot(num_rows, 1, index)
         index+=1
-        plt.title(str(num_agent) + " cities")
+        if enable_titles:
+            plt.title(str(num_agent) + " cities")
+
         for (k, k_data) in num_agent_data.items():
             for (mode, mode_data) in k_data.items():
                 data = dict(sorted(mode_data.items(), key=operator.itemgetter(0)))
-                procs=list(data.keys())
 
                 error_list = dict(sorted(min_max_data[num_agent][k][mode].items(), key=operator.itemgetter(0)))
                 errors = [[abs(data[proc] - error_list[proc][j]) for proc in \
                     data.keys()] for j in [0, 1]]
 
+                plt.yscale(yscale)
                 plt.errorbar(data.keys(), data.values(), \
                     yerr=errors,\
                     label="K=" + str(k) + " (" + mode + ")",\
                     marker=markers[mode])
-        plt.legend()
+
+        for data in other_data:
+            for (label, values) in data.items():
+                plt.plot(values[0], values[1], label=label)
+
         plt.xlabel("Number of cores")
         plt.ylabel(ylabel)
         plt.xticks(procs)
+        plt.legend()
 
-def plot_exec_time(mean_data, min_max_data):
+def plot_exec_time(mean_data, min_max_data, **kwargs):
     plot_data(
             "Execution times of the distributed SIR model simulation",
             "Execution time (seconds)",
-            mean_data, min_max_data)
+            mean_data, min_max_data, **kwargs)
     
-def plot_speed_up(mean_data, min_max_data):
+def plot_speed_up(mean_data, min_max_data, **kwargs):
     mean_data_cpy = mean_data.copy()
     min_max_data_cpy = min_max_data.copy()
     for (num_agent, num_agent_data) in mean_data_cpy.items():
@@ -127,7 +147,7 @@ def plot_speed_up(mean_data, min_max_data):
             for (mode, mode_data) in num_agent_data[k].items():
                 k_data[mode] = mode_data.copy()
                 min_max_data_cpy[num_agent][k][mode] = min_max_data[num_agent][k][mode].copy()
-                t_0 = k_data[mode][1]
+                t_0 = k_data[mode][min(list(k_data[mode].keys()))]
                 for proc in k_data[mode].keys():
                     k_data[mode][proc] = t_0 / k_data[mode][proc]
                     min_max_data_cpy[num_agent][k][mode][proc] = (
@@ -135,10 +155,14 @@ def plot_speed_up(mean_data, min_max_data):
                             t_0/min_max_data_cpy[num_agent][k][mode][proc][1]
                             )
 
+    procs = num_procs(mean_data)
     plot_data(
             "Speed up for the distributed SIR model simulation",
             "Speed up",
-            mean_data_cpy, min_max_data_cpy)
+            mean_data_cpy, min_max_data_cpy,
+            other_data=[{"linear": (procs, procs)}],
+            **kwargs
+            )
 
 def build_parser():
     parser = argparse.ArgumentParser()
@@ -152,6 +176,7 @@ def build_parser():
     parser.add_argument(
             '-n', '--n_cities', type=int, nargs="*",\
                     help="Plots graphs for the specified city counts (default: plots all data)")
+    parser.add_argument('--no-titles', action='store_true')
     return parser
 
 
@@ -167,9 +192,9 @@ if __name__ == "__main__":
     # print("Mean times : " + str(mean_data))
     min_max_data = min_max_data(time_data)
     # print("Min max times : " + str(min_max_data))
-    plot_exec_time(mean_data, min_max_data)
+    plot_exec_time(mean_data, min_max_data, enable_titles=not args.no_titles)
     plt.figure()
-    plot_speed_up(mean_data, min_max_data)
+    plot_speed_up(mean_data, min_max_data, enable_titles=not args.no_titles)
 
     plt.show()
 

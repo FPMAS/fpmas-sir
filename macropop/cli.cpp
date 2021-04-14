@@ -40,7 +40,7 @@ namespace macropop {
 			else if (mode_str == "uniform" || mode_str == "UNIFORM")
 				graph_mode = UNIFORM;
 			else {
-				std::cout << "Unknown graph mode : " << mode_str << std::endl;
+				std::cout << "Unknown graph mode: " << mode_str << std::endl;
 				printf("Try 'fpmas-sir-macropop --help' for more information.\n");
 
 				arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
@@ -58,7 +58,22 @@ namespace macropop {
 			else if (mode_str == "hard_sync" || mode_str == "HARD_SYNC")
 				sync_mode = HARD_SYNC;
 			else {
-				std::cout << "Unknown sync mode : " << mode_str << std::endl;
+				std::cout << "Unknown sync mode: " << mode_str << std::endl;
+				printf("Try 'fpmas-sir-macropop --help' for more information.\n");
+
+				arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
+				std::exit(EXIT_FAILURE);
+			}
+		}
+		if(lb_method_arg->count > 0) {
+			std::string lb_str(lb_method_arg->sval[0]);
+			if(lb_str == "zoltan" || lb_str == "ZOLTAN")
+				lb_method = ZOLTAN;
+			else if (lb_str == "random" || lb_str == "RANDOM")
+				lb_method = RANDOM;
+			else {
+				std::cout << "Unknown LB method: " << lb_str << std::endl;
+
 				printf("Try 'fpmas-sir-macropop --help' for more information.\n");
 
 				arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
@@ -66,5 +81,4 @@ namespace macropop {
 			}
 		}
 	}
-
 }

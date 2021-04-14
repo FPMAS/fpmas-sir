@@ -1,8 +1,51 @@
 #include "fpmas/model/model.h"
 #include "fpmas/model/serializer.h"
 #include "fpmas/utils/perf.h"
+#include "fpmas/graph/random_load_balancing.h"
+#include "config.h"
 
 namespace macropop {
+	template<template<typename> class SyncMode>
+		class ModelConfig {
+			protected:
+				fpmas::model::detail::AgentGraph<SyncMode> graph {fpmas::communication::WORLD};
+
+				fpmas::scheduler::Scheduler scheduler;
+				fpmas::runtime::Runtime runtime {scheduler};
+
+				fpmas::graph::ZoltanLoadBalancing<fpmas::model::AgentPtr> zoltan {
+					fpmas::communication::WORLD
+				};
+				fpmas::graph::ScheduledLoadBalancing<fpmas::model::AgentPtr> scheduled_lb {zoltan, scheduler, runtime};
+				fpmas::graph::RandomLoadBalancing<fpmas::model::AgentPtr> random_lb {
+					fpmas::communication::WORLD
+				};
+
+				fpmas::api::graph::LoadBalancing<fpmas::model::AgentPtr>* lb;
+				ModelConfig(LbMethod lb_method) {
+					switch(lb_method) {
+						case ZOLTAN:
+							lb = &scheduled_lb;
+							break;
+						case RANDOM:
+							lb = &random_lb;
+							break;
+					}
+				}
+		};
+
+	template<template<typename> class SyncMode>
+		class Model : private ModelConfig<SyncMode>, public fpmas::model::detail::Model {
+			public:
+				Model(LbMethod lb) :
+					ModelConfig<SyncMode>(lb),
+					fpmas::model::detail::Model(
+						this->ModelConfig<SyncMode>::graph,
+						this->ModelConfig<SyncMode>::scheduler,
+						this->ModelConfig<SyncMode>::runtime,
+						*this->lb) {}
+		};
+
 	FPMAS_DEFINE_GROUPS(CITY,DISEASE);
 
 	FPMAS_DEFINE_LAYERS(CITY_TO_CITY, DISEASE_TO_CITY);
